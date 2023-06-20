@@ -11,21 +11,47 @@ https://docs.djangoproject.com/en/4.2/ref/settings/
 """
 
 from pathlib import Path
+import environ
+import os
+
+# Configure the environment variables
+env = environ.Env(
+    DEBUG=(bool, False),  # DEBUG environment variable, defaulting to False
+    USE_S3=(bool, False),  # USE_S3 environment variable, defaulting to False
+    RENDER=(bool, False),  # RENDER environment variable, defaulting to False
+)
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+# Read the environment variables from the .env file
+environ.Env.read_env(os.path.join(BASE_DIR, ".env"))
 
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/4.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-
+SECRET_KEY = env("SECRET_KEY")
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = False
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ["*"]
+
+# Check if the RENDER environment variable is truthy
+if env("RENDER"):
+    # Append the RENDER_EXTERNAL_HOSTNAME to the ALLOWED_HOSTS list
+    ALLOWED_HOSTS.append(env("RENDER_EXTERNAL_HOSTNAME"))
+
+    # Set the DJANGO_SUPERUSER_USERNAME to the value of the corresponding environment variable
+    DJANGO_SUPERUSER_USERNAME = env("DJANGO_SUPERUSER_USERNAME")
+
+    # Set the DJANGO_SUPERUSER_PASSWORD to the value of the corresponding environment variable
+    DJANGO_SUPERUSER_PASSWORD = env("DJANGO_SUPERUSER_PASSWORD")
+
+    # Set the DJANGO_SUPERUSER_EMAIL to the value of the corresponding environment variable
+    DJANGO_SUPERUSER_EMAIL = env("DJANGO_SUPERUSER_EMAIL")
 
 
 # Application definition
@@ -36,11 +62,16 @@ INSTALLED_APPS = [
     "django.contrib.contenttypes",
     "django.contrib.sessions",
     "django.contrib.messages",
+    "whitenoise.runserver_nostatic",
     "django.contrib.staticfiles",
+    "django_extensions",
+    "rest_framework",
+    "library_api",
 ]
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -74,10 +105,7 @@ WSGI_APPLICATION = "config.wsgi.application"
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
 
 DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",
-    }
+    "default": env.db(),
 }
 
 
@@ -115,9 +143,27 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/4.2/howto/static-files/
 
+# Set the base URL for static files
 STATIC_URL = "static/"
 
-# Default primary key field type
-# https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
+# Specify the directories where static files are located
+STATICFILES_DIRS = [
+    BASE_DIR / "static",
+]
 
+# Set the root directory for collecting static files
+STATIC_ROOT = BASE_DIR / "staticfiles"
+
+# Check if DEBUG mode is False
+if not DEBUG:
+    # Set the static files storage to use Whitenoise for serving compressed and manifest-static files
+    STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
+
+# Default primary key field type
+# https://docs.djangoproject.com/en/4.1/ref/settings/#default-auto-field
+
+# Set the default auto field for model primary keys
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+# Set the custom user model for authentication
+AUTH_USER_MODEL = "library_api.User"
