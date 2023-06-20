@@ -1,11 +1,12 @@
 from django.contrib import admin
 from .models import Book, Author, User, Tracker
+from django.contrib.auth.admin import UserAdmin
 
 # Register your models here.
 
 
 # Register the User model with the admin site
-admin.site.register(User)
+admin.site.register(User, UserAdmin)
 
 # Register the Book model with the admin site
 admin.site.register(Book)
